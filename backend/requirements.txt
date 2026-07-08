@@ -1,0 +1,12 @@
+Flask
+Flask-Cors
+python-dotenv
+pandas
+numpy
+scikit-learn
+matplotlib
+plotly
+openpyxl
+xlsxwriter
+reportlab
+joblib
