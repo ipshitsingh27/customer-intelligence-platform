@@ -1,22 +1,26 @@
 from flask import Blueprint, request, jsonify
 
 from app.utils.validators import validate_upload
-from app.services.file_service import save_uploaded_file, load_csv
+
+from app.services.file_service import (
+    save_uploaded_file,
+    load_csv,
+    save_upload_history,
+    get_upload_history
+)
 
 upload_bp = Blueprint("upload", __name__)
 
 
+# ---------------------------------------
+# Upload Dataset
+# ---------------------------------------
+
 @upload_bp.route("/upload", methods=["POST"])
 def upload_dataset():
-    """
-    Upload, validate, clean and summarize dataset.
-    """
 
     file = request.files.get("file")
 
-    # -----------------------------
-    # Validate File
-    # -----------------------------
     is_valid, message = validate_upload(file)
 
     if not is_valid:
@@ -27,15 +31,12 @@ def upload_dataset():
 
     try:
 
-        # -----------------------------
-        # Save File
-        # -----------------------------
         file_info = save_uploaded_file(file)
 
-        # -----------------------------
-        # Load & Clean Dataset
-        # -----------------------------
         dataset_info = load_csv(file_info["filepath"])
+
+        # Save Upload History
+        save_upload_history(file_info, dataset_info)
 
         return jsonify({
 
@@ -61,9 +62,21 @@ def upload_dataset():
     except Exception as e:
 
         return jsonify({
-
             "success": False,
-
             "message": str(e)
-
         }), 500
+
+
+# ---------------------------------------
+# Upload History
+# ---------------------------------------
+
+@upload_bp.route("/upload/history", methods=["GET"])
+def upload_history():
+
+    history = get_upload_history()
+
+    return jsonify({
+        "success": True,
+        "history": history
+    }), 200

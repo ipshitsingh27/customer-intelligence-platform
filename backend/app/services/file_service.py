@@ -1,12 +1,15 @@
 import os
 import uuid
+import json
+from datetime import datetime
+
 import pandas as pd
 from werkzeug.utils import secure_filename
 
 from app.services.cleaning_service import clean_dataset
 
 # ---------------------------------------
-# Project Paths
+# Paths
 # ---------------------------------------
 
 BASE_DIR = os.path.abspath(
@@ -14,6 +17,12 @@ BASE_DIR = os.path.abspath(
 )
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+
+HISTORY_FILE = os.path.join(
+    BASE_DIR,
+    "data",
+    "upload_history.json"
+)
 
 ALLOWED_EXTENSIONS = {"csv"}
 
@@ -23,9 +32,6 @@ ALLOWED_EXTENSIONS = {"csv"}
 # ---------------------------------------
 
 def create_upload_folder():
-    """
-    Create uploads folder if it doesn't exist.
-    """
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
@@ -34,9 +40,6 @@ def create_upload_folder():
 # ---------------------------------------
 
 def save_uploaded_file(file):
-    """
-    Save uploaded CSV with a unique filename.
-    """
 
     create_upload_folder()
 
@@ -59,13 +62,10 @@ def save_uploaded_file(file):
 
 
 # ---------------------------------------
-# Read + Clean CSV
+# Load + Clean CSV
 # ---------------------------------------
 
 def load_csv(file_path):
-    """
-    Read uploaded CSV and clean it.
-    """
 
     dataframe = pd.read_csv(file_path)
 
@@ -78,3 +78,38 @@ def load_csv(file_path):
         "shape": cleaned_dataframe.shape,
         "cleaning_summary": cleaning_summary
     }
+
+
+# ---------------------------------------
+# Upload History
+# ---------------------------------------
+
+def save_upload_history(file_info, dataset_info):
+
+    history = []
+
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r") as f:
+            history = json.load(f)
+
+    history.insert(0, {
+        "id": uuid.uuid4().hex,
+        "filename": file_info["original_filename"],
+        "saved_name": file_info["filename"],
+        "rows": dataset_info["rows"],
+        "columns": len(dataset_info["columns"]),
+        "status": "Completed",
+        "uploaded_at": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    })
+
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=4)
+
+
+def get_upload_history():
+
+    if not os.path.exists(HISTORY_FILE):
+        return []
+
+    with open(HISTORY_FILE, "r") as f:
+        return json.load(f)
