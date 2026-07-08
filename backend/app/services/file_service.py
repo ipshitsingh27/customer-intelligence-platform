@@ -113,3 +113,27 @@ def get_upload_history():
 
     with open(HISTORY_FILE, "r") as f:
         return json.load(f)
+    # ---------------------------------------
+# Load Latest Uploaded Dataset
+# ---------------------------------------
+
+def load_latest_dataset():
+
+    history = get_upload_history()
+
+    if len(history) == 0:
+        return None
+
+    latest = history[0]
+
+    file_path = os.path.join(
+        UPLOAD_FOLDER,
+        latest["saved_name"]
+    )
+
+    if not os.path.exists(file_path):
+        return None
+
+    dataframe = pd.read_csv(file_path)
+
+    return dataframe
