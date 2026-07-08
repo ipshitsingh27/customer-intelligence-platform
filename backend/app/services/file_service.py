@@ -3,6 +3,8 @@ import uuid
 import pandas as pd
 from werkzeug.utils import secure_filename
 
+from app.services.cleaning_service import clean_dataset
+
 # ---------------------------------------
 # Project Paths
 # ---------------------------------------
@@ -40,9 +42,7 @@ def save_uploaded_file(file):
 
     original_filename = secure_filename(file.filename)
 
-    unique_filename = (
-        f"{uuid.uuid4().hex}_{original_filename}"
-    )
+    unique_filename = f"{uuid.uuid4().hex}_{original_filename}"
 
     file_path = os.path.join(
         UPLOAD_FOLDER,
@@ -59,19 +59,22 @@ def save_uploaded_file(file):
 
 
 # ---------------------------------------
-# Read CSV
+# Read + Clean CSV
 # ---------------------------------------
 
 def load_csv(file_path):
     """
-    Load CSV into a Pandas DataFrame.
+    Read uploaded CSV and clean it.
     """
 
     dataframe = pd.read_csv(file_path)
 
+    cleaned_dataframe, cleaning_summary = clean_dataset(dataframe)
+
     return {
-        "dataframe": dataframe,
-        "rows": len(dataframe),
-        "columns": list(dataframe.columns),
-        "shape": dataframe.shape
+        "dataframe": cleaned_dataframe,
+        "rows": len(cleaned_dataframe),
+        "columns": list(cleaned_dataframe.columns),
+        "shape": cleaned_dataframe.shape,
+        "cleaning_summary": cleaning_summary
     }

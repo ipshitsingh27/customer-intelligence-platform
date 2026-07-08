@@ -9,12 +9,14 @@ upload_bp = Blueprint("upload", __name__)
 @upload_bp.route("/upload", methods=["POST"])
 def upload_dataset():
     """
-    Upload CSV dataset.
+    Upload, validate, clean and summarize dataset.
     """
 
     file = request.files.get("file")
 
-    # Validate uploaded file
+    # -----------------------------
+    # Validate File
+    # -----------------------------
     is_valid, message = validate_upload(file)
 
     if not is_valid:
@@ -24,28 +26,44 @@ def upload_dataset():
         }), 400
 
     try:
-        # Save file
-        result = save_uploaded_file(file)
 
-        # Read CSV
-        csv_data = load_csv(result["filepath"])
+        # -----------------------------
+        # Save File
+        # -----------------------------
+        file_info = save_uploaded_file(file)
+
+        # -----------------------------
+        # Load & Clean Dataset
+        # -----------------------------
+        dataset_info = load_csv(file_info["filepath"])
 
         return jsonify({
+
             "success": True,
-            "message": "Dataset uploaded successfully.",
+
+            "message": "Dataset uploaded and cleaned successfully.",
+
             "file": {
-                "original_name": result["original_filename"],
-                "saved_name": result["filename"]
+                "original_name": file_info["original_filename"],
+                "saved_name": file_info["filename"]
             },
+
             "dataset": {
-                "rows": csv_data["rows"],
-                "columns": csv_data["columns"],
-                "shape": csv_data["shape"]
-            }
+                "rows": dataset_info["rows"],
+                "columns": dataset_info["columns"],
+                "shape": dataset_info["shape"]
+            },
+
+            "cleaning_summary": dataset_info["cleaning_summary"]
+
         }), 200
 
     except Exception as e:
+
         return jsonify({
+
             "success": False,
+
             "message": str(e)
+
         }), 500
