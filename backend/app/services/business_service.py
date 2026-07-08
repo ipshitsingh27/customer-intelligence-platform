@@ -12,7 +12,6 @@ def identify_segment(row):
     f = row["Frequency"]
     m = row["Monetary"]
 
-    # Champions
     if r <= 30 and f >= 10 and m >= 5000:
         return {
             "name": "Champions",
@@ -22,7 +21,6 @@ def identify_segment(row):
             "recommendation": "Reward with VIP offers and exclusive benefits."
         }
 
-    # Loyal Customers
     elif r <= 90 and f >= 3:
         return {
             "name": "Loyal Customers",
@@ -32,7 +30,6 @@ def identify_segment(row):
             "recommendation": "Maintain loyalty through rewards and personalized campaigns."
         }
 
-    # Potential Customers
     elif r <= 180:
         return {
             "name": "Potential Customers",
@@ -42,7 +39,6 @@ def identify_segment(row):
             "recommendation": "Run targeted email and discount campaigns."
         }
 
-    # At Risk
     else:
         return {
             "name": "At Risk",
@@ -86,8 +82,58 @@ def build_business_dashboard(dataframe):
 
     total_customers = len(segmented)
 
-    distribution = []
+    # ===========================
+    # Dashboard KPIs
+    # ===========================
 
+    dataframe = dataframe.copy()
+
+    dataframe["Revenue"] = (
+        dataframe["Quantity"] *
+        dataframe["UnitPrice"]
+    )
+
+    total_revenue = round(
+        dataframe["Revenue"].sum(),
+        2
+    )
+
+    total_orders = dataframe["InvoiceNo"].nunique()
+
+    active_customers = dataframe["CustomerID"].nunique()
+
+    average_order_value = round(
+        total_revenue / total_orders,
+        2
+    )
+
+    # ===========================
+    # Monthly Revenue
+    # ===========================
+
+    monthly_df = dataframe.copy()
+
+    monthly_df["InvoiceDate"] = pd.to_datetime(
+        monthly_df["InvoiceDate"]
+    )
+
+    monthly_df["Month"] = (
+        monthly_df["InvoiceDate"]
+        .dt.strftime("%b")
+    )
+
+    monthly_revenue = (
+        monthly_df
+        .groupby("Month")["Revenue"]
+        .sum()
+        .reset_index()
+    )
+
+    monthly_revenue = monthly_revenue.to_dict(
+        orient="records"
+    )
+
+    distribution = []
     for segment_name in segmented["Segment"].unique():
 
         temp = segmented[
@@ -103,7 +149,7 @@ def build_business_dashboard(dataframe):
             "customers": len(temp),
 
             "percentage": round(
-                len(temp) / total_customers * 100,
+                (len(temp) / total_customers) * 100,
                 2
             ),
 
@@ -118,6 +164,20 @@ def build_business_dashboard(dataframe):
         })
 
     dashboard = {
+
+        "kpis": {
+
+            "total_revenue": total_revenue,
+
+            "total_orders": total_orders,
+
+            "active_customers": active_customers,
+
+            "average_order_value": average_order_value
+
+        },
+
+        "monthly_revenue": monthly_revenue,
 
         "total_customers": total_customers,
 

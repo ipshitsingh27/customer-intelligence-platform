@@ -4,6 +4,7 @@ from flask_cors import CORS
 from app.api.upload import upload_bp
 from app.api.segments import segments_bp
 from app.api.dashboard import dashboard_bp
+from app.api.analytics import analytics_bp
 
 
 def create_app():
@@ -15,6 +16,7 @@ def create_app():
     app.register_blueprint(upload_bp, url_prefix="/api")
     app.register_blueprint(segments_bp, url_prefix="/api")
     app.register_blueprint(dashboard_bp, url_prefix="/api")
+    app.register_blueprint(analytics_bp, url_prefix="/api")
 
     @app.route("/")
     def home():

@@ -9,6 +9,9 @@ from app.services.file_service import (
     get_upload_history
 )
 
+# Store latest uploaded dataframe in memory
+
+
 upload_bp = Blueprint("upload", __name__)
 
 
@@ -18,6 +21,8 @@ upload_bp = Blueprint("upload", __name__)
 
 @upload_bp.route("/upload", methods=["POST"])
 def upload_dataset():
+
+    
 
     file = request.files.get("file")
 
@@ -34,6 +39,9 @@ def upload_dataset():
         file_info = save_uploaded_file(file)
 
         dataset_info = load_csv(file_info["filepath"])
+
+        # Save latest dataframe for Analytics, Dashboard etc.
+       
 
         # Save Upload History
         save_upload_history(file_info, dataset_info)
