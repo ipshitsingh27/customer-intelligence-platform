@@ -1,64 +1,136 @@
-import { useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { UploadCloud, FileSpreadsheet, CheckCircle2, XCircle, Loader2, Inbox } from 'lucide-react'
-import { uploads, supportedFileTypes } from '../data/mockData.js'
-import Card from '../components/ui/Card.jsx'
-import Badge from '../components/ui/Badge.jsx'
-import ProgressBar from '../components/ui/ProgressBar.jsx'
-import SectionHeader from '../components/ui/SectionHeader.jsx'
-import { Table, THead, TH, TBody, TR, TD } from '../components/ui/Table.jsx'
+import { useState, useCallback, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  UploadCloud,
+  FileSpreadsheet,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Inbox,
+} from "lucide-react";
+import { supportedFileTypes } from "../data/mockData.js";
+import { uploadDataset, getUploadHistory } from "../services/api.js";
+import Card from "../components/ui/Card.jsx";
+import Badge from "../components/ui/Badge.jsx";
+import ProgressBar from "../components/ui/ProgressBar.jsx";
+import SectionHeader from "../components/ui/SectionHeader.jsx";
+import { Table, THead, TH, TBody, TR, TD } from "../components/ui/Table.jsx";
 
-const statusTone = { Processed: 'teal', Processing: 'amber', Failed: 'rose' }
-const statusIcon = { Processed: CheckCircle2, Processing: Loader2, Failed: XCircle }
+const statusTone = {
+  Completed: "teal",
+  Processing: "amber",
+  Failed: "rose",
+};
+
+const statusIcon = {
+  Completed: CheckCircle2,
+  Processing: Loader2,
+  Failed: XCircle,
+};
 
 export default function Upload() {
-  const [dragging, setDragging] = useState(false)
-  const [simUpload, setSimUpload] = useState(null) // { name, progress }
+  const [dragging, setDragging] = useState(false);
+  const [simUpload, setSimUpload] = useState(null); // { name, progress }
+  const [uploads, setUploads] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const simulate = useCallback((name) => {
-    setSimUpload({ name, progress: 0 })
-    let p = 0
+    setSimUpload({ name, progress: 0 });
+    let p = 0;
     const interval = setInterval(() => {
-      p += Math.random() * 22 + 8
+      p += Math.random() * 22 + 8;
       if (p >= 100) {
-        p = 100
-        clearInterval(interval)
-        setTimeout(() => setSimUpload(null), 900)
+        p = 100;
+        clearInterval(interval);
+        setTimeout(() => setSimUpload(null), 900);
       }
-      setSimUpload((prev) => (prev ? { ...prev, progress: p } : prev))
-    }, 300)
-  }, [])
+      setSimUpload((prev) => (prev ? { ...prev, progress: p } : prev));
+    }, 300);
+  }, []);
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      setLoading(true);
+
+      const response = await getUploadHistory();
+
+      if (response.success) {
+        setUploads(response.history);
+      }
+    } catch (error) {
+      console.error("Failed to load upload history:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleUpload = async (file) => {
+    if (!file) return;
+
+    try {
+      setLoading(true);
+
+      const response = await uploadDataset(file);
+
+      if (response.success) {
+        await loadHistory();
+
+        simulate(file.name);
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("Upload failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDrop = (e) => {
-    e.preventDefault()
-    setDragging(false)
-    const file = e.dataTransfer.files?.[0]
-    simulate(file ? file.name : 'customer_dataset.csv')
-  }
+    e.preventDefault();
+    setDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+
+    if (file) {
+      handleUpload(file);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-semibold text-ink-100">Upload Dataset</h1>
+        <h1 className="font-display text-2xl font-semibold text-ink-100">
+          Upload Dataset
+        </h1>
         <p className="mt-1 text-sm text-ink-500">
-          Bring in customer, order, or transaction data — InsightCart's AI will map it automatically.
+          Bring in customer, order, or transaction data — InsightCart's AI will
+          map it automatically.
         </p>
       </div>
 
       <Card className="p-6">
         <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
           className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all duration-300 ${
             dragging
-              ? 'border-signal-violet bg-signal-violet/5 scale-[1.01]'
-              : 'border-base-500 hover:border-base-400'
+              ? "border-signal-violet bg-signal-violet/5 scale-[1.01]"
+              : "border-base-500 hover:border-base-400"
           }`}
         >
           <motion.div
             animate={{ y: dragging ? -6 : [0, -6, 0] }}
-            transition={{ duration: 2.4, repeat: dragging ? 0 : Infinity, ease: 'easeInOut' }}
+            transition={{
+              duration: 2.4,
+              repeat: dragging ? 0 : Infinity,
+              ease: "easeInOut",
+            }}
             className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-signal-violet/20 to-signal-teal/20"
           >
             <UploadCloud size={28} className="text-signal-violet" />
@@ -66,13 +138,21 @@ export default function Upload() {
           <p className="mt-5 font-display text-lg font-medium text-ink-100">
             Drag & drop your file here
           </p>
-          <p className="mt-1 text-sm text-ink-500">or click to browse from your computer</p>
+          <p className="mt-1 text-sm text-ink-500">
+            or click to browse from your computer
+          </p>
           <label className="focus-ring mt-5 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-signal-violet to-signal-violetDim px-5 py-2.5 text-sm font-medium text-white shadow-[0_8px_24px_-8px_rgba(124,92,252,0.6)] hover:brightness-110">
             Choose File
             <input
               type="file"
               className="hidden"
-              onChange={(e) => e.target.files?.[0] && simulate(e.target.files[0].name)}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+
+                if (file) {
+                  handleUpload(file);
+                }
+              }}
             />
           </label>
 
@@ -97,9 +177,15 @@ export default function Upload() {
                     <FileSpreadsheet size={14} className="text-signal-violet" />
                     {simUpload.name}
                   </span>
-                  <span className="tabular-nums text-ink-500">{Math.min(100, Math.round(simUpload.progress))}%</span>
+                  <span className="tabular-nums text-ink-500">
+                    {Math.min(100, Math.round(simUpload.progress))}%
+                  </span>
                 </div>
-                <ProgressBar value={simUpload.progress} tone="violet" className="mt-2.5" />
+                <ProgressBar
+                  value={simUpload.progress}
+                  tone="violet"
+                  className="mt-2.5"
+                />
               </motion.div>
             )}
           </AnimatePresence>
@@ -114,8 +200,12 @@ export default function Upload() {
         {uploads.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-14 text-center">
             <Inbox size={32} className="text-ink-700" />
-            <p className="mt-3 text-sm font-medium text-ink-300">No uploads yet</p>
-            <p className="mt-1 text-xs text-ink-700">Files you upload will appear here once processed.</p>
+            <p className="mt-3 text-sm font-medium text-ink-300">
+              No uploads yet
+            </p>
+            <p className="mt-1 text-xs text-ink-700">
+              Files you upload will appear here once processed.
+            </p>
           </div>
         ) : (
           <Table>
@@ -130,26 +220,31 @@ export default function Upload() {
             </THead>
             <TBody>
               {uploads.map((u) => {
-                const Icon = statusIcon[u.status]
+                const Icon = statusIcon[u.status];
                 return (
                   <TR key={u.id}>
-                    <TD className="font-medium text-ink-100">{u.name}</TD>
+                    <TD className="font-medium text-ink-100">{u.filename}</TD>
                     <TD>{u.rows.toLocaleString()}</TD>
-                    <TD>{u.size}</TD>
-                    <TD>{u.date}</TD>
+                    <TD>{u.columns} Columns</TD>
+                    <TD>{u.uploaded_at}</TD>
                     <TD>
                       <Badge tone={statusTone[u.status]}>
-                        <Icon size={11} className={u.status === 'Processing' ? 'animate-spin' : ''} />
+                        <Icon
+                          size={11}
+                          className={
+                            u.status === "Processing" ? "animate-spin" : ""
+                          }
+                        />
                         {u.status}
                       </Badge>
                     </TD>
                   </TR>
-                )
+                );
               })}
             </TBody>
           </Table>
         )}
       </Card>
     </div>
-  )
+  );
 }
